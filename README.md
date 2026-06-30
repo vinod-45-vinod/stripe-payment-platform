@@ -37,7 +37,6 @@ curl http://localhost:8083/actuator/health  # fraud-service
 The platform is split into **four independent microservices** connected by Kafka events.
 All events carry an `X-Trace-Id` header for end-to-end log correlation across services.
 
-![Architecture Overview](docs/images/1.%20architecture-overview.png)
 
 ```
                    ┌──────────────────────────────────────────────────────┐
@@ -89,9 +88,6 @@ All consumer log lines include `[traceId=xxx paymentId=yyy]` via SLF4J MDC.
 
 ## Diagrams
 
-All architecture and flow diagrams are available in [`docs/DIAGRAMS.txt`](docs/DIAGRAMS.txt)
-with full specifications and Mermaid code.
-
 | Diagram | Description |
 |---------|-------------|
 | ![](docs/images/1.%20architecture-overview.png) | System Architecture |
@@ -109,7 +105,6 @@ with full specifications and Mermaid code.
 
 ## Payment Lifecycle
 
-![Payment State Machine](docs/images/2.%20payment-state-machine.png)
 
 ```
 CREATED → AUTHORIZED → CAPTURED → SUCCEEDED → REFUNDED
@@ -146,7 +141,6 @@ payment-platform/
 ├── notification-service/    <- Webhooks + retry + analytics (port 8082)
 ├── fraud-service/           <- Rule-based fraud checks (port 8083)
 ├── docs/
-│   ├── DIAGRAMS.txt         <- Diagram specifications (ASCII + Mermaid)
 │   └── images/              <- Architecture and flow diagrams (PNG)
 ├── docker/
 │   └── init-dbs.sql         <- Postgres multi-DB init (payment, ledger, fraud, notification)
@@ -189,8 +183,6 @@ docker compose up -d postgres redis zookeeper kafka
 ## API Reference — payment-service (:8080)
 
 Swagger UI: http://localhost:8080/swagger-ui.html
-
-![payment-service API](docs/images/5.%20payment-service-api-overview.png)
 
 ### Create Payment
 ```bash
@@ -237,8 +229,6 @@ curl -s -X POST http://localhost:8080/payments \
 
 Swagger UI: http://localhost:8081/swagger-ui.html
 
-![ledger-service Workflow](docs/images/6.%20ledger-service-workflow.png)
-
 ```bash
 # Check balance for a customer account
 curl http://localhost:8081/accounts/CUSTOMER/cust_001/balance
@@ -262,8 +252,6 @@ curl http://localhost:8081/accounts/PLATFORM/platform-fee-account/balance
 
 Swagger UI: http://localhost:8082/swagger-ui.html
 
-![notification-service Workflow](docs/images/7.%20notification-service-workflow.png)
-
 ### Webhook Delivery
 
 When a `payment.captured` or `refund.created` event is consumed, the notification-service:
@@ -274,7 +262,6 @@ When a `payment.captured` or `refund.created` event is consumed, the notificatio
 
 **Retry Schedule:**
 
-![Webhook Retry Schedule](docs/images/10.%20webhook-retry-schedule.png)
 
 | Attempt | Delay After Previous Failure |
 |---------|------------------------------|
@@ -354,8 +341,6 @@ docker exec -it payment-platform-kafka kafka-console-consumer \
 
 Swagger UI: http://localhost:8083/swagger-ui.html
 
-![fraud-service Workflow](docs/images/8.%20fraud-service-workflow.png)
-
 ---
 
 ## Running Tests
@@ -414,8 +399,6 @@ docker exec -it payment-platform-kafka kafka-console-consumer \
 
 ### Outbox Pattern
 
-![Transactional Outbox Pattern](docs/images/3.%20transactional-outbox-pattern.png)
-
 Events are written to `outbox_events` table in the **same DB transaction** as the payment state change.
 A `@Scheduled` job publishes them to Kafka every 5s. This guarantees:
 - No event lost if Kafka is down (retried on next run)
@@ -432,16 +415,12 @@ call `payment-service` directly. This means:
 
 ### Redis Rate Limiting
 
-![Redis Rate Limiting](docs/images/9.%20redis-rate-limiting-flow.png)
-
 POST /payments is protected by a **fixed-window per-customerId** rate limiter implemented with
 Redis `INCR` + `EXPIRE`. The window and limit are configurable (`rate-limit.max-requests=10`,
 `rate-limit.window-seconds=60`). Exceeds limit → HTTP 429 + `Retry-After` header. Fails open
 if Redis is unavailable (never blocks legitimate traffic due to infra issues).
 
 ### Distributed Trace IDs
-
-![Kafka Consumer Flow](docs/images/4.%20kafka-consumer-flow.png)
 
 Each Kafka message produced by `OutboxPublisherJob` carries an `X-Trace-Id` header (UUID).
 Consumer services extract this header and place it in SLF4J MDC so every log line for a
