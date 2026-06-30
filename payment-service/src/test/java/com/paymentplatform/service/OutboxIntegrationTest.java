@@ -50,7 +50,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "spring.cache.type=redis",
         "outbox.publisher.delay-ms=2000",
-        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+        // Re-enable Kafka — this test provides a real Kafka via Testcontainers.
+        // The global test application.yml excludes KafkaAutoConfiguration, so we must override.
+        "spring.autoconfigure.exclude="
 })
 @Testcontainers(disabledWithoutDocker = true)
 class OutboxIntegrationTest {
