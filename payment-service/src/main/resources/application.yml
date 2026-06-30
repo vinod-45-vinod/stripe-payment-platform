@@ -1,0 +1,88 @@
+spring:
+  application:
+    name: payment-platform
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  cache:
+    type: redis
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payment_platform
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: payment-service
+    description: Core payment processing service (state machine, idempotency, outbox, rate limiting)
+
+# Rate limiting — sliding window per customerId
+rate-limit:
+  max-requests: 10
+  window-seconds: 60
+
+# SpringDoc / Swagger UI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.paymentplatform: DEBUG
+    org.springframework.statemachine: WARN
+    org.springframework.kafka: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] [traceId=%X{traceId:-} paymentId=%X{paymentId:-}] %-5level %logger{36} - %msg%n"
+
+# Outbox publisher — how often to poll for unpublished events (milliseconds)
+outbox:
+  publisher:
+    delay-ms: 5000
+

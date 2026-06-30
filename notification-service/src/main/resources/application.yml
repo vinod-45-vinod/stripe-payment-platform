@@ -1,0 +1,98 @@
+spring:
+  application:
+    name: notification-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+    listener:
+      ack-mode: RECORD
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: notification-service
+    description: Webhook delivery with retry, DLQ, and event-driven analytics
+
+# SpringDoc / Swagger UI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.paymentplatform.notification: DEBUG
+    org.springframework.kafka: WARN
+    org.flywaydb: INFO
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] [traceId=%X{traceId:-} paymentId=%X{paymentId:-}] %-5level %logger{36} - %msg%n"
+
+# Webhook delivery configuration
+notification:
+  webhook:
+    # Retry schedule delays in minutes: attempt 1->2 = 1m, 2->3 = 5m, 3->4 = 15m, 4->FAILED = 60m
+    retry-delays-minutes: 1,5,15,60
+    # Max retry attempts before marking FAILED
+    max-retries: 4
+    # HTTP timeout for webhook delivery (seconds)
+    delivery-timeout-seconds: 10
+    # Scheduler interval for picking up pending/failed webhooks (ms)
+    scheduler-interval-ms: 30000
+    # Base URL for mock merchant endpoint (dev profile)
+    mock-merchant-url: http://localhost:8082/mock/webhook
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:notification_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false

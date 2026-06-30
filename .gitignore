@@ -1,0 +1,61 @@
+# ── Gradle ───────────────────────────────────────────────────────────────────
+.gradle/
+**/build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Gradle wrapper jar (keep scripts, exclude binary)
+!gradle/wrapper/gradle-wrapper.jar
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+*.launch
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ── Spring Boot ───────────────────────────────────────────────────────────────
+# Local override configs (developer-specific, never commit)
+**/application-local.yml
+**/application-local.properties
+**/application-secret.yml
+**/application-secret.properties
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+# Keep docker-compose.yml (it's needed for the project)
+# Ignore any local override files
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ── Test / Coverage ───────────────────────────────────────────────────────────
+.testcontainers.properties
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.swp
+*.class

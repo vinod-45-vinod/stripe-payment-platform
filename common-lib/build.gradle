@@ -1,0 +1,38 @@
+// common-lib: shared utilities for all microservices.
+// Uses Spring BOM for consistent dependency versions.
+
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.7"
+    }
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // SLF4J API for MDC access in TraceContext
+    // Runtime implementation is provided by each consuming service's Logback/Log4j2.
+    implementation 'org.slf4j:slf4j-api'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

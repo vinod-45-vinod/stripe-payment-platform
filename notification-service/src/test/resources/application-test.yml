@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:notification_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+# Disable Kafka autoconfiguration for unit tests that don't need it
+# (individual tests can override via @TestPropertySource)
+logging:
+  level:
+    com.paymentplatform.notification: DEBUG

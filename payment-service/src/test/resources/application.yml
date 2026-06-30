@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+  # Disable Redis auto-configuration for unit tests.
+  # Integration tests (Testcontainers) override redis host/port via @DynamicPropertySource.
+  # Without this, Spring will try to connect to localhost:6379 on startup which fails in CI.
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  cache:
+    type: none   # Disable Spring Cache for unit tests — Testcontainers tests re-enable via @TestPropertySource
+
+logging:
+  level:
+    com.paymentplatform: INFO
+    org.springframework.statemachine: WARN

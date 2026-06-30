@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: fraud-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fraud_db
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: fraud-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+    listener:
+      ack-mode: RECORD
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: fraud-service
+    description: Rule-based fraud checks + Redis velocity counter
+
+# Fraud rule thresholds
+fraud:
+  rules:
+    high-value-threshold: 10000.00   # flag payments above this amount
+    velocity-window-seconds: 60      # time window for velocity check
+    velocity-max-payments: 5         # max payments per customer per window
+
+logging:
+  level:
+    com.paymentplatform.fraud: DEBUG
+    org.springframework.kafka: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] [traceId=%X{traceId:-} paymentId=%X{paymentId:-}] %-5level %logger{36} - %msg%n"
+
+# SpringDoc / Swagger UI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

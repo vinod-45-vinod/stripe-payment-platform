@@ -1,0 +1,11 @@
+// Root build.gradle — shared configuration applied to all subprojects.
+// Each subproject has its own build.gradle with its specific dependencies.
+
+subprojects {
+    group = 'com.paymentplatform'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}

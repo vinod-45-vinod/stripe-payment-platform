@@ -1,0 +1,16 @@
+rootProject.name = 'payment-platform'
+
+// Multi-module Gradle project.
+// payment-service: core payment processing service
+// shared-events: Kafka event DTOs shared by all services
+// common-lib: shared utilities (KafkaTopics, TraceContext)
+// ledger-service: double-entry bookkeeping consumer
+// notification-service: webhook delivery + analytics consumer
+// fraud-service: fraud rule checks + Redis velocity counter
+
+include 'payment-service'
+include 'shared-events'
+include 'common-lib'
+include 'ledger-service'
+include 'notification-service'
+include 'fraud-service'
