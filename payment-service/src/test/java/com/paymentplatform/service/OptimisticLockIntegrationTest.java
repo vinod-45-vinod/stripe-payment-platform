@@ -40,7 +40,8 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties = {
         "spring.cache.type=redis",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration",
-        "outbox.publisher.delay-ms=3600000"
+        "outbox.publisher.delay-ms=3600000",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"
 })
 @Testcontainers(disabledWithoutDocker = true)
 class OptimisticLockIntegrationTest {

@@ -49,7 +49,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(properties = {
         "spring.cache.type=redis",
-        "outbox.publisher.delay-ms=2000"    // Fast poll for test
+        "outbox.publisher.delay-ms=2000",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"
 })
 @Testcontainers(disabledWithoutDocker = true)
 class OutboxIntegrationTest {

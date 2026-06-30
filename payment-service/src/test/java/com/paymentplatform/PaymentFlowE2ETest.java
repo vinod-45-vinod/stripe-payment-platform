@@ -46,7 +46,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.flyway.enabled=false"
+                "spring.flyway.enabled=false",
+                "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect",
+                "spring.cache.type=redis"
         }
 )
 @Testcontainers(disabledWithoutDocker = true)

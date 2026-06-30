@@ -18,7 +18,8 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest(properties = {
         "spring.cache.type=redis",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration",
-        "outbox.publisher.delay-ms=3600000"   // 1h — effectively disabled in context test
+        "outbox.publisher.delay-ms=3600000",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"
 })
 @Testcontainers(disabledWithoutDocker = true)
 class PaymentPlatformApplicationTests {
