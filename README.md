@@ -1,9 +1,9 @@
 # Payment Platform
 
-> **A Stripe-inspired payment platform built in Java 21 + Spring Boot 4**
+> A Stripe-inspired payment platform built in Java 21 + Spring Boot 4
 > — progressing from monolith to microservices across 7 production-grade levels.
 
-## ⚡ Quick Start (3 commands)
+## Quick Start (3 commands)
 
 ```bash
 # 1. Clone
@@ -37,6 +37,8 @@ curl http://localhost:8083/actuator/health  # fraud-service
 The platform is split into **four independent microservices** connected by Kafka events.
 All events carry an `X-Trace-Id` header for end-to-end log correlation across services.
 
+![Architecture Overview](docs/images/1.%20architecture-overview.png)
+
 ```
                    ┌──────────────────────────────────────────────────────┐
 REST Client ──────▶│           payment-service (:8080)                    │
@@ -67,7 +69,7 @@ REST Client ──────▶│           payment-service (:8080)          
 DLQ: All 3 consumers → payment-dlq (after 3 retries + 1s back-off)
 ```
 
-**Rate Limiting:** POST /payments is limited to **10 req/min per customerId** (Redis sliding window).
+**Rate Limiting:** POST /payments is limited to **10 req/min per customerId** (Redis fixed window).
 Exceeds limit → HTTP 429 with `Retry-After` header.
 
 **Cross-Service Trace IDs:** Every Kafka message carries `X-Trace-Id` header.
@@ -85,7 +87,29 @@ All consumer log lines include `[traceId=xxx paymentId=yyy]` via SLF4J MDC.
 
 ---
 
+## Diagrams
+
+All architecture and flow diagrams are available in [`docs/DIAGRAMS.txt`](docs/DIAGRAMS.txt)
+with full specifications and Mermaid code.
+
+| Diagram | Description |
+|---------|-------------|
+| ![](docs/images/1.%20architecture-overview.png) | System Architecture |
+| ![](docs/images/2.%20payment-state-machine.png) | Payment State Machine |
+| ![](docs/images/3.%20transactional-outbox-pattern.png) | Transactional Outbox Pattern |
+| ![](docs/images/4.%20kafka-consumer-flow.png) | Kafka Consumer + DLQ + Trace ID Flow |
+| ![](docs/images/5.%20payment-service-api-overview.png) | payment-service API (Swagger) |
+| ![](docs/images/6.%20ledger-service-workflow.png) | ledger-service Workflow |
+| ![](docs/images/7.%20notification-service-workflow.png) | notification-service Workflow |
+| ![](docs/images/8.%20fraud-service-workflow.png) | fraud-service Workflow |
+| ![](docs/images/9.%20redis-rate-limiting-flow.png) | Redis Rate Limiting Flow |
+| ![](docs/images/10.%20webhook-retry-schedule.png) | Webhook Retry Schedule |
+
+---
+
 ## Payment Lifecycle
+
+![Payment State Machine](docs/images/2.%20payment-state-machine.png)
 
 ```
 CREATED → AUTHORIZED → CAPTURED → SUCCEEDED → REFUNDED
@@ -111,19 +135,22 @@ CREATED → AUTHORIZED → CAPTURED → SUCCEEDED → REFUNDED
 
 ```
 payment-platform/
-├── shared-events/           ← Kafka event DTOs (shared by all services)
+├── shared-events/           <- Kafka event DTOs (shared by all services)
 │   └── com.paymentplatform.events.PaymentEvents
 │   └── com.paymentplatform.events.OutboxEventType
-├── common-lib/              ← Shared utilities (KafkaTopics, TraceContext)
+├── common-lib/              <- Shared utilities (KafkaTopics, TraceContext)
 │   └── com.paymentplatform.common.KafkaTopics
 │   └── com.paymentplatform.common.TraceContext
-├── payment-service/         ← Core payment processing (port 8080)
-├── ledger-service/          ← Double-entry bookkeeping (port 8081)
-├── notification-service/    ← Webhooks + retry + analytics (port 8082)
-├── fraud-service/           ← Rule-based fraud checks (port 8083)
+├── payment-service/         <- Core payment processing (port 8080)
+├── ledger-service/          <- Double-entry bookkeeping (port 8081)
+├── notification-service/    <- Webhooks + retry + analytics (port 8082)
+├── fraud-service/           <- Rule-based fraud checks (port 8083)
+├── docs/
+│   ├── DIAGRAMS.txt         <- Diagram specifications (ASCII + Mermaid)
+│   └── images/              <- Architecture and flow diagrams (PNG)
 ├── docker/
-│   └── init-dbs.sql         ← Postgres multi-DB init (payment, ledger, fraud, notification)
-└── docker-compose.yml       ← Full stack (all services + infra)
+│   └── init-dbs.sql         <- Postgres multi-DB init (payment, ledger, fraud, notification)
+└── docker-compose.yml       <- Full stack (all services + infra)
 ```
 
 ---
@@ -160,6 +187,10 @@ docker compose up -d postgres redis zookeeper kafka
 ---
 
 ## API Reference — payment-service (:8080)
+
+Swagger UI: http://localhost:8080/swagger-ui.html
+
+![payment-service API](docs/images/5.%20payment-service-api-overview.png)
 
 ### Create Payment
 ```bash
@@ -204,6 +235,10 @@ curl -s -X POST http://localhost:8080/payments \
 
 ## API Reference — ledger-service (:8081)
 
+Swagger UI: http://localhost:8081/swagger-ui.html
+
+![ledger-service Workflow](docs/images/6.%20ledger-service-workflow.png)
+
 ```bash
 # Check balance for a customer account
 curl http://localhost:8081/accounts/CUSTOMER/cust_001/balance
@@ -217,13 +252,17 @@ curl http://localhost:8081/accounts/PLATFORM/platform-fee-account/balance
 
 **Double-entry model:** For every captured payment of amount A:
 - **DEBIT** customer account: -A
-- **CREDIT** merchant account: +(A × 0.95)  [95% of payment]
-- **CREDIT** platform account: +(A × 0.05)  [5% fee]
-- Net sum = 0 ✓ (zero-sum invariant enforced and unit-tested)
+- **CREDIT** merchant account: +(A x 0.95)  [95% of payment]
+- **CREDIT** platform account: +(A x 0.05)  [5% fee]
+- Net sum = 0 (zero-sum invariant enforced and unit-tested)
 
 ---
 
 ## API Reference — notification-service (:8082)
+
+Swagger UI: http://localhost:8082/swagger-ui.html
+
+![notification-service Workflow](docs/images/7.%20notification-service-workflow.png)
 
 ### Webhook Delivery
 
@@ -234,6 +273,8 @@ When a `payment.captured` or `refund.created` event is consumed, the notificatio
 4. On failure, schedules retries using the exponential backoff schedule below
 
 **Retry Schedule:**
+
+![Webhook Retry Schedule](docs/images/10.%20webhook-retry-schedule.png)
 
 | Attempt | Delay After Previous Failure |
 |---------|------------------------------|
@@ -283,6 +324,13 @@ curl -X POST http://localhost:8082/mock/webhook -H "Content-Type: application/js
 curl http://localhost:8082/mock/webhook/stats
 ```
 
+### Analytics
+
+```bash
+# Rolling payment metrics — sourced purely from Kafka event consumption
+curl http://localhost:8082/analytics
+```
+
 ### DLQ (Dead Letter Queue)
 
 All three consumer services (ledger, notification, fraud) use Spring Kafka's
@@ -299,6 +347,14 @@ docker exec -it payment-platform-kafka kafka-console-consumer \
   --topic payment-dlq \
   --from-beginning
 ```
+
+---
+
+## API Reference — fraud-service (:8083)
+
+Swagger UI: http://localhost:8083/swagger-ui.html
+
+![fraud-service Workflow](docs/images/8.%20fraud-service-workflow.png)
 
 ---
 
@@ -357,6 +413,9 @@ docker exec -it payment-platform-kafka kafka-console-consumer \
 ## Key Design Decisions
 
 ### Outbox Pattern
+
+![Transactional Outbox Pattern](docs/images/3.%20transactional-outbox-pattern.png)
+
 Events are written to `outbox_events` table in the **same DB transaction** as the payment state change.
 A `@Scheduled` job publishes them to Kafka every 5s. This guarantees:
 - No event lost if Kafka is down (retried on next run)
@@ -364,6 +423,7 @@ A `@Scheduled` job publishes them to Kafka every 5s. This guarantees:
 - At-least-once delivery (consumers must be idempotent)
 
 ### Event-Driven Decoupling
+
 `ledger-service`, `notification-service`, and `fraud-service` are **pure consumers** — they never
 call `payment-service` directly. This means:
 - A notification failure does NOT affect payment processing
@@ -371,12 +431,18 @@ call `payment-service` directly. This means:
 - Fraud results are logged but not yet wired into payment blocking (documented design decision)
 
 ### Redis Rate Limiting
+
+![Redis Rate Limiting](docs/images/9.%20redis-rate-limiting-flow.png)
+
 POST /payments is protected by a **fixed-window per-customerId** rate limiter implemented with
 Redis `INCR` + `EXPIRE`. The window and limit are configurable (`rate-limit.max-requests=10`,
 `rate-limit.window-seconds=60`). Exceeds limit → HTTP 429 + `Retry-After` header. Fails open
 if Redis is unavailable (never blocks legitimate traffic due to infra issues).
 
 ### Distributed Trace IDs
+
+![Kafka Consumer Flow](docs/images/4.%20kafka-consumer-flow.png)
+
 Each Kafka message produced by `OutboxPublisherJob` carries an `X-Trace-Id` header (UUID).
 Consumer services extract this header and place it in SLF4J MDC so every log line for a
 particular payment flow — across payment-service, ledger-service, notification-service, and
@@ -428,12 +494,12 @@ by payment-service to update status asynchronously.
 
 ## Level Progress
 
-| Level | Description                                                  | Status      |
-|-------|--------------------------------------------------------------|-------------|
-| 1     | REST + State Machine + PostgreSQL                            | ✅ Complete |
-| 2     | Idempotency + Optimistic Locking + Redis                     | ✅ Complete |
-| 3     | Kafka + Outbox Pattern                                       | ✅ Complete |
-| 4     | Microservices Split (4 services)                             | ✅ Complete |
-| 5     | Webhook Delivery + Retry + DLQ                               | ✅ Complete |
-| 6     | Full Dockerization + Testcontainers E2E + CI                 | ✅ Complete |
-| 7     | Rate Limiting + Analytics + OpenAPI + Trace IDs + Polish     | ✅ Complete |
+| Level | Description                                                  | Status   |
+|-------|--------------------------------------------------------------|----------|
+| 1     | REST + State Machine + PostgreSQL                            | Complete |
+| 2     | Idempotency + Optimistic Locking + Redis                     | Complete |
+| 3     | Kafka + Outbox Pattern                                       | Complete |
+| 4     | Microservices Split (4 services)                             | Complete |
+| 5     | Webhook Delivery + Retry + DLQ                               | Complete |
+| 6     | Full Dockerization + Testcontainers E2E + CI                 | Complete |
+| 7     | Rate Limiting + Analytics + OpenAPI + Trace IDs + Polish     | Complete |
