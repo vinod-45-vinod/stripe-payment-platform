@@ -7,7 +7,7 @@
 
 ```bash
 # 1. Clone
-git clone <repo-url> && cd payment-platform
+git clone https://github.com/vinod-45-vinod/stripe-payment-platform.git && cd stripe-payment-platform
 
 # 2. Start everything (Postgres, Redis, Kafka + 4 microservices)
 docker compose up -d
