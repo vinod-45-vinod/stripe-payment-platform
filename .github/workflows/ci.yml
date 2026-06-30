@@ -11,12 +11,6 @@ jobs:
     name: Build & Test (${{ matrix.module }})
     runs-on: ubuntu-latest
 
-    # Docker-in-Docker for Testcontainers
-    services:
-      docker:
-        image: docker:dind
-        options: --privileged
-
     strategy:
       fail-fast: false
       matrix:
@@ -52,9 +46,9 @@ jobs:
       - name: Run tests for ${{ matrix.module }}
         run: ./gradlew :${{ matrix.module }}:test --no-daemon --continue
         env:
-          # Testcontainers needs DOCKER_HOST for DinD
-          DOCKER_HOST: unix:///var/run/docker.sock
+          # Testcontainers — use the runner's Docker daemon directly (no DinD needed)
           TESTCONTAINERS_RYUK_DISABLED: true
+          DOCKER_HOST: unix:///var/run/docker.sock
 
       - name: Upload test reports
         uses: actions/upload-artifact@v4
